@@ -43,6 +43,7 @@ set(TEST_SRC
 set(EXTRA_DIST README.md LICENSE LICENSE_COSMICEMU)
 set(EXTRA_DIST_DIRS)
 
+
 # Uses system libraries or downloads and build if necessary
 include(BuildFFTW)
 include(BuildGSL)
@@ -54,15 +55,21 @@ include(BuildGSL)
 #include(BuildAngpow)
 
 # Compilation flags
-set(CMAKE_C_FLAGS_RELEASE "-O3 -fomit-frame-pointer -fno-common -fPIC -std=gnu99 -DHAVE_ANGPOW")
-set(CMAKE_C_FLAGS_DEBUG   "-Og -fomit-frame-pointer -fno-common -fPIC -std=gnu99 -DHAVE_ANGPOW")
-if ((NOT "${CMAKE_C_COMPILER_ID}" MATCHES "^(Apple)?Clang$") OR FORCE_OPENMP)
-    # When not using Clang and in Release mode, enabling OpenMP support
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fopenmp")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fopenmp")
-    if(DEFINED ENV{CONDA_PREFIX})
-        include_directories("$ENV{CONDA_PREFIX}/include")
-        add_link_options("LINKER:-rpath,$ENV{CONDA_PREFIX}/lib")
+if (WIN32 AND DEFINED ENV{CONDA_PREFIX})
+    add_definitions(-D_COMPLEX_STRUCT=1 -D_USE_MATH_DEFINES /qopenmp)
+    include_directories("$ENV{CONDA_PREFIX}/include")
+else()
+# TODO: these are gnu compiler specific
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -fomit-frame-pointer -fno-common -fPIC -std=gnu99 -DHAVE_ANGPOW")
+    set(CMAKE_C_FLAGS_DEBUG   "-Og -fomit-frame-pointer -fno-common -fPIC -std=gnu99 -DHAVE_ANGPOW")
+    if ((NOT "${CMAKE_C_COMPILER_ID}" MATCHES "^(Apple)?Clang$") OR FORCE_OPENMP)
+        # When not using Clang and in Release mode, enabling OpenMP support
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fopenmp")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fopenmp")
+        if(DEFINED ENV{CONDA_PREFIX})
+            include_directories("$ENV{CONDA_PREFIX}/include")
+            add_link_options("LINKER:-rpath,$ENV{CONDA_PREFIX}/lib")
+        endif()
     endif()
 endif()
 
@@ -78,6 +85,7 @@ include_directories(include)
 
 # Compiles all the source files
 add_library(objlib OBJECT ${CCL_SRC})
+
 # Make sure the external projects are correclty built
 # Uncomment below when we bring ANGPOW back
 #add_dependencies(objlib ANGPOW)
@@ -95,8 +103,11 @@ endif()
 # The reason for building ccl as a shared library is that we can link it to
 # class directly, and it's not a dependency anymore
 add_library(ccl SHARED $<TARGET_OBJECTS:objlib>)
-target_link_libraries(ccl ${GSL_LIBRARIES} ${FFTW_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES} m)
-
+if (WIN32)
+    target_link_libraries(ccl ${GSL_LIBRARIES} ${FFTW_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES})
+else()
+    target_link_libraries(ccl ${GSL_LIBRARIES} ${FFTW_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES} m)
+endif()
 # Builds the test suite
 add_executable(check_ccl ${TEST_SRC})
 target_link_libraries(check_ccl ccl)
@@ -104,17 +115,19 @@ target_link_libraries(check_ccl ccl)
 # Builds example folder in place, make this optional
 add_subdirectory(examples "${CMAKE_CURRENT_SOURCE_DIR}/examples" EXCLUDE_FROM_ALL)
 
-# Builds pkgconfig file for CCL
-SET(PROJECT_DESCRIPTION "DESC Core Cosmology Library: cosmology routines with validated numerical accuracy")
-SET(PKG_CONFIG_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
-SET(PKG_CONFIG_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include/")
-SET(PKG_CONFIG_REQUIRES "gsl >= 2.1")
-SET(PKG_CONFIG_REQUIRES_PRIVATE "fftw3")
-SET(PKG_CONFIG_LIBS "-L${PKG_CONFIG_LIBDIR} -lccl -lm")
-SET(PKG_CONFIG_CFLAGS "-I${PKG_CONFIG_INCLUDEDIR}")
-CONFIGURE_FILE(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/pkg-config.cmakein"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc" )
+if (NOT WIN32)
+    # Builds pkgconfig file for CCL
+    SET(PROJECT_DESCRIPTION "DESC Core Cosmology Library: cosmology routines with validated numerical accuracy")
+    SET(PKG_CONFIG_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
+    SET(PKG_CONFIG_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include/")
+    SET(PKG_CONFIG_REQUIRES "gsl >= 2.1")
+    SET(PKG_CONFIG_REQUIRES_PRIVATE "fftw3")
+    SET(PKG_CONFIG_LIBS "-L${PKG_CONFIG_LIBDIR} -lccl -lm")
+    SET(PKG_CONFIG_CFLAGS "-I${PKG_CONFIG_INCLUDEDIR}")
+    CONFIGURE_FILE(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/pkg-config.cmakein"
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc" )
+endif()
 
 # Installs the CCL library
 install(
@@ -128,7 +141,9 @@ install(
     FILES_MATCHING PATTERN "*.h")
 install(FILES ${EXTRA_DIST} DESTINATION share/ccl)
 install(DIRECTORY ${EXTRA_DIST_DIRS} DESTINATION share/ccl)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ccl.pc DESTINATION lib/pkgconfig)
+if (NOT WIN32)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ccl.pc DESTINATION lib/pkgconfig)
+endif()
 
 # Adds uninstall target
 if(NOT TARGET uninstall)

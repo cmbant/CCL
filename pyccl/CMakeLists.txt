@@ -11,7 +11,11 @@ include_directories(BEFORE ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIRS})
 
 # We also build a static library only for linking the python module
 add_library(ccl_static STATIC $<TARGET_OBJECTS:objlib>)
-target_link_libraries(ccl_static ${GSL_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES} ${FFTW_LIBRARIES} m)
+if (WIN32)
+    target_link_libraries(ccl_static ${GSL_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES} ${FFTW_LIBRARIES})
+else()
+    target_link_libraries(ccl_static ${GSL_LIBRARIES} ${CLASS_LIBRARIES} ${ANGPOW_LIBRARIES} ${FFTW_LIBRARIES} m)
+endif()
 add_dependencies(ccl_static ccl)
 
 # Adds these extra depencies before building SWIG interface, to ensure that SWIG

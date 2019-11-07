@@ -50,7 +50,7 @@ TASK: Computes halo concentration; the ratio of virial raidus to scale radius fo
 double ccl_halo_concentration(ccl_cosmology *cosmo, double halomass,
                               double a, double odelta, int *status) {
 
-  double gz, g0, nu, delta_c, a_form;
+  double gz, g0, nu, delta_c;
   double Mpiv, A, B, C;
 
   switch(cosmo->config.halo_concentration_method){

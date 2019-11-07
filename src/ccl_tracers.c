@@ -237,7 +237,6 @@ static double lensing_kernel_integrate(ccl_cosmology *cosmo,
 //Returns number of divisions on which
 //the lensing kernel should be calculated
 int ccl_get_nchi_lensing_kernel(int nz, double *z_arr, int *status) {
-  int nchi;
   double dz = -1, z_max = -1;
   //Compute redshift step
   dz = (z_arr[nz-1]-z_arr[0])/(nz-1);

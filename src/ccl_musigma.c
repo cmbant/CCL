@@ -18,7 +18,7 @@
  * @param status, integer indicating the status
  */
 void ccl_cosmology_spline_linpower_musigma(ccl_cosmology* cosmo, ccl_f2d_t *psp, int* status) {
-  double kmin, kmax, ndecades, amin, amax, ic, sigma8, log_sigma8;
+  double kmin, kmax, ndecades, amin, amax, sigma8, log_sigma8;
   int nk, na, s;
   double *lk = NULL, *aa = NULL, *lpk_ln = NULL, *lpk_nl = NULL;
   double norm_pk;

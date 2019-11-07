@@ -14,26 +14,41 @@
 
 /* This code is FFTLog, which is described in arXiv:astro-ph/9905191 */
 
-static double complex lngamma_fftlog(double complex z)
+static double_complex lngamma_fftlog(double_complex z)
 {
   gsl_sf_result lnr, phi;
   gsl_sf_lngamma_complex_e(creal(z), cimag(z), &lnr, &phi);
+#ifdef _COMPLEX_STRUCT
+  double_complex res = {lnr.val, phi.val};
+  return res;
+#else
   return lnr.val + I*phi.val;
+#endif
 }
 
-static double complex gamma_fftlog(double complex z)
+static double_complex gamma_fftlog(double_complex z)
 {
   return cexp(lngamma_fftlog(z));
 }
 
-static double complex polar (double r, double phi)
+static double_complex polar (double r, double phi)
 {
+#ifdef _COMPLEX_STRUCT
+  double_complex res = {r*cos(phi) , r*sin(phi)};
+  return res;
+#else
   return (r*cos(phi) +I*(r*sin(phi)));
+#endif
 }
 
 static void lngamma_4(double x, double y, double* lnr, double* arg)
 {
+#ifdef _COMPLEX_STRUCT
+  double_complex z = {x,y};
+  double_complex w = lngamma_fftlog(z);
+#else
   double complex w = lngamma_fftlog(x+y*I);
+#endif
   if(lnr) *lnr = creal(w);
   if(arg) *arg = cimag(w);
 }
@@ -53,7 +68,7 @@ static double goodkr(int N, double mu, double q, double L, double kr)
   return kr;
 }
 
-void compute_u_coefficients(int N, double mu, double q, double L, double kcrc, double complex u[])
+void compute_u_coefficients(int N, double mu, double q, double L, double kcrc, double_complex u[])
 {
   double y = M_PI/L;
   double k0r0 = kcrc * exp(-L);
@@ -80,19 +95,25 @@ void compute_u_coefficients(int N, double mu, double q, double L, double kcrc, d
 
   for(int m = N/2+1; m < N; m++)
     u[m] = conj(u[N-m]);
-  if((N % 2) == 0)
+  if((N % 2) == 0) {
+#ifdef _COMPLEX_STRUCT
+    double_complex z = {creal(u[N/2]) , 0.0};
+    u[N/2] =  z;
+#else
     u[N/2] = (creal(u[N/2]) + I*0.0);
+#endif
+   }
 }
 
-void fht(int N, const double r[], const double complex a[], double k[], double complex b[], double mu,
-         double q, double kcrc, int noring, double complex* u)
+void fht(int N, const double r[], const double_complex a[], double k[], double_complex b[], double mu,
+         double q, double kcrc, int noring, double_complex* u)
 {
   double L = log(r[N-1]/r[0]) * N/(N-1.);
-  double complex* ulocal = NULL;
+  double_complex* ulocal = NULL;
   if(u == NULL) {
     if(noring)
       kcrc = goodkr(N, mu, q, L, kcrc);
-    ulocal = malloc (sizeof(complex double)*N);
+    ulocal = malloc (sizeof(double_complex)*N);
     compute_u_coefficients(N, mu, q, L, kcrc, ulocal);
     u = ulocal;
   }
@@ -102,13 +123,20 @@ void fht(int N, const double r[], const double complex a[], double k[], double c
   fftw_plan reverse_plan = fftw_plan_dft_1d(N, (fftw_complex*) b, (fftw_complex*) b, +1, FFTW_ESTIMATE);
   fftw_execute(forward_plan);
   for(int m = 0; m < N; m++)
+#ifdef _COMPLEX_STRUCT
+  { double_complex z = _Cmulcc(b[m],u[m]);
+    z = _Cmulcr(z, 1/(double)(N));
+    b[m] = z;
+  }
+#else
     b[m] *= u[m] / (double)(N);       // divide by N since FFTW doesn't normalize the inverse FFT
+#endif
   fftw_execute(reverse_plan);
   fftw_destroy_plan(forward_plan);
   fftw_destroy_plan(reverse_plan);
 
   /* Reverse b array */
-  double complex tmp;
+  double_complex tmp;
   for(int n = 0; n < N/2; n++) {
     tmp = b[n];
     b[n] = b[N-n-1];
@@ -127,14 +155,20 @@ void fht(int N, const double r[], const double complex a[], double k[], double c
 void fftlog_ComputeXi2D(double bessel_order,int N,const double l[],const double cl[],
 			double th[], double xi[])
 {
-  double complex* a = malloc(sizeof(complex double)*N);
-  double complex* b = malloc(sizeof(complex double)*N);
+  double_complex* a = malloc(sizeof(double_complex)*N);
+  double_complex* b = malloc(sizeof(double_complex)*N);
 
-  for(int i=0;i<N;i++)
-    a[i]=l[i]*cl[i];
+  for(int i=0;i<N;i++){
+#ifdef _COMPLEX_STRUCT
+    double_complex z =  {l[i]*cl[i],0.0};
+    a[i]=z;
+#else
+	a[i]=l[i]*cl[i];
+#endif
+    }
   fht(N,l,a,th,b,bessel_order,0,1,1,NULL);
   for(int i=0;i<N;i++)
-    xi[i]=creal(b[i]/(2*M_PI*th[i]));
+    xi[i]=creal(b[i])/(2*M_PI*th[i]);
 
   free(a);
   free(b);
@@ -143,14 +177,20 @@ void fftlog_ComputeXi2D(double bessel_order,int N,const double l[],const double 
 void fftlog_ComputeXiLM(double l, double m, int N, const double k[], const double pk[],
 			double r[], double xi[])
 {
-  double complex* a = malloc(sizeof(complex double)*N);
-  double complex* b = malloc(sizeof(complex double)*N);
+  double_complex* a = malloc(sizeof(double_complex)*N);
+  double_complex* b = malloc(sizeof(double_complex)*N);
 
-  for(int i = 0; i < N; i++)
-    a[i] = pow(k[i], m - 0.5) * pk[i];
+  for(int i = 0; i < N; i++){
+#ifdef _COMPLEX_STRUCT
+    double_complex z= { pow(k[i], m - 0.5) * pk[i],0};
+    a[i] = z;
+#else
+	a[i] = pow(k[i], m - 0.5) * pk[i];
+#endif
+  }
   fht(N, k, a, r, b, l + 0.5, 0, 1, 1, NULL);
   for(int i = 0; i < N; i++)
-    xi[i] = creal(pow(2*M_PI*r[i], -(m-0.5)) * b[i]);
+    xi[i] = pow(2*M_PI*r[i], -(m-0.5)) * creal(b[i]);
 
   free(a);
   free(b);

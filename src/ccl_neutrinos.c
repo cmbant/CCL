@@ -163,7 +163,6 @@ TASK: Compute Omeganu * h^2 as a function of time.
 double ccl_Omeganuh2 (double a, int N_nu_mass, double* mnu, double T_CMB, int* status) {
   double Tnu, a4, prefix_massless, mnuone, OmNuh2;
   double Tnu_eff, mnuOT, intval, prefix_massive;
-  double total_mass; // To check if this is the massless or massive case.
 
   // First check if N_nu_mass is 0
   if (N_nu_mass == 0) return 0.0;

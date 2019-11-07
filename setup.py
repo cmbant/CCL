@@ -6,34 +6,43 @@ from subprocess import call
 from io import open
 import os
 import sys
+import shutil
 
 
 def _compile_ccl():
-    call(["mkdir", "-p", "build"])
+    if not os.path.exists('build'):
+        os.mkdir('build')
     v = sys.version_info
     if call(["cmake", "-H.", "-Bbuild",
              "-DPYTHON_VERSION=%d.%d.%d" % (
-                v.major, v.minor, v.micro)]) != 0:
+                     v.major, v.minor, v.micro)]) != 0:
         raise Exception(
             "Could not run CMake configuration. Make sure "
             "CMake is installed !")
 
-    if call(["make", "-Cbuild", "_ccllib"]) != 0:
+    if call(["cmake", "--build", "build"]) != 0:
         raise Exception("Could not build CCL")
 
+    #    if call(["make", "-Cbuild", "_ccllib"]) != 0:
+    #        raise Exception("Could not build CCL")
+
     # Finds the library under its different possible names
-    if os.path.exists("build/pyccl/_ccllib.so"):
-        call(["cp", "build/pyccl/_ccllib.so", "pyccl/"])
+    cclo = os.path.join("build", "pyccl", "_ccllib.so")
+    if os.path.exists(cclo):
+        shutil.copy(cclo, "pyccl")
     else:
         raise Exception("Could not find wrapper shared library, "
                         "compilation must have failed.")
-    if call(["cp", "build/pyccl/ccllib.py", "pyccl/"]) != 0:
+    cclib = os.path.join("build", "pyccl", "ccllib.py")
+    if not os.path.exists(cclib):
         raise Exception("Could not find python module, "
                         "SWIG must have failed.")
+    shutil.copy(cclib, "pyccl")
 
 
 class build(_build):
     """Specialized Python source builder."""
+
     def run(self):
         _compile_ccl()
         _build.run(self)
@@ -41,6 +50,7 @@ class build(_build):
 
 class develop(_develop):
     """Specialized Python develop mode."""
+
     def run(self):
         _compile_ccl()
         _develop.run(self)
@@ -76,5 +86,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Physics'
-      ]
-    )
+    ]
+)

@@ -319,7 +319,7 @@ TASK: Outputs fitting function for use in halo mass function calculation;
 -*/
 static double massfunc_f(ccl_cosmology *cosmo, double halomass, double a, double odelta, int *status)
 {
-  double fit_A, fit_a, fit_b, fit_c, fit_d, fit_p, overdensity_delta;
+  double fit_A, fit_a, fit_b, fit_c, fit_d, fit_p;
   double Omega_m_a;
   double delta_c_Tinker, nu;
 
@@ -478,7 +478,7 @@ static double massfunc_f(ccl_cosmology *cosmo, double halomass, double a, double
 
 static double ccl_halo_b1(ccl_cosmology *cosmo, double halomass, double a, double odelta, int *status)
 {
-  double fit_A, fit_B, fit_C, fit_a, fit_b, fit_c, fit_p, overdensity_delta, y;
+  double fit_A, fit_B, fit_C, fit_a, fit_b, fit_c, fit_p, y;
   double delta_c_Tinker, nu;
   double sigma=ccl_sigmaM(cosmo,halomass,a, status);
   switch(cosmo->config.mass_function_method) {

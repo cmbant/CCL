@@ -22,7 +22,15 @@
 #include "ccl_emu17.h"
 
 // Sizes of stuff
-static int m[2] = {111, 36}, neta=2808, peta[2]={7, 28}, rs=8, p=8;
+#define peta0 7
+#define peta1 28
+#define m0 111
+#define m1 36
+#define neta 2808
+#define rs 8
+#define p 8
+
+const static int m[2] = {m0,m1}, peta[2]={peta0, peta1};
 
 // Kriging basis computed by emuInit
 // Sizes of each basis will be peta[ee] and m[ee]
@@ -148,8 +156,8 @@ static int emuInit() {
 void ccl_pkemu(double *xstar, int sizeofystar, double *ystar, int* status, ccl_cosmology* cosmo) {
   static double inited=0;
   int ee, i, j, k;
-  double wstar[peta[0]+peta[1]];
-  double Sigmastar[2][peta[1]][m[0]];
+  double wstar[peta0+peta1];
+  double Sigmastar[2][peta1][m0];
   double ystaremu[neta];
   double ybyz[rs];
   double logc;
